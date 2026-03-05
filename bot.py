@@ -5,7 +5,7 @@ import pandas as pd
 from binance.client import Client
 import ta
 from telegram import Bot
-
+print("BOT STARTED")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -70,3 +70,4 @@ while True:
     except Exception as e:
         print(e)
         time.sleep(60)
+
