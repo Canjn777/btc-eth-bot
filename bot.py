@@ -12,7 +12,7 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 bot = Bot(token=TELEGRAM_TOKEN)
 
-bot.send_message(chat_id=CHAT_ID, text="🤖 Trading Bot is online")
+
 
 client = Client()
 
@@ -113,3 +113,4 @@ while True:
 
         print(e)
         time.sleep(60)
+
