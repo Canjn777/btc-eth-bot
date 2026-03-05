@@ -12,7 +12,8 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 bot = Bot(token=TELEGRAM_TOKEN)
 
-
+import asyncio
+asyncio.run(bot.send_message(chat_id=CHAT_ID, text="机器人已启动"))
 
 client = Client()
 
@@ -113,4 +114,5 @@ while True:
 
         print(e)
         time.sleep(60)
+
 
