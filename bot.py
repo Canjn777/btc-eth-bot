@@ -13,20 +13,18 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 bot = Bot(token=TELEGRAM_TOKEN)
 
-import asyncio
+async def send_message(text):
+    await bot.send_message(chat_id=CHAT_ID, text=text)
 
-async def send_start_message():
-    await bot.send_message(chat_id=CHAT_ID, text="🤖 交易机器人已启动并开始监控 BTC 和 ETH")
-
-asyncio.run(send_start_message())
-
-asyncio.run(bot.send_message(chat_id=CHAT_ID, text="🤖 Trading Bot 已启动"))
+# 启动提醒
+asyncio.run(send_message("🤖 交易机器人已启动，正在监控 BTC 和 ETH"))
 
 client = Client()
 
-symbols = ["BTCUSDT","ETHUSDT"]
+symbols = ["BTCUSDT", "ETHUSDT"]
 
 last_signal = {}
+
 
 def get_data(symbol):
 
@@ -43,6 +41,8 @@ def get_data(symbol):
     ])
 
     df["close"] = df["close"].astype(float)
+    df["high"] = df["high"].astype(float)
+    df["low"] = df["low"].astype(float)
 
     return df
 
@@ -61,8 +61,8 @@ def check_signal(symbol):
     ema50 = ta.trend.EMAIndicator(df["close"], window=50).ema_indicator().iloc[-1]
 
     atr = ta.volatility.AverageTrueRange(
-        df["high"].astype(float),
-        df["low"].astype(float),
+        df["high"],
+        df["low"],
         df["close"]
     ).average_true_range().iloc[-1]
 
@@ -84,15 +84,15 @@ def check_signal(symbol):
         if signal == "LONG":
 
             tp1 = price + atr
-            tp2 = price + atr*2
-            tp3 = price + atr*3
+            tp2 = price + atr * 2
+            tp3 = price + atr * 3
             sl = price - atr
 
         else:
 
             tp1 = price - atr
-            tp2 = price - atr*2
-            tp3 = price - atr*3
+            tp2 = price - atr * 2
+            tp3 = price - atr * 3
             sl = price + atr
 
         message = f"""
@@ -111,7 +111,7 @@ SL: {round(sl,2)}
 RSI: {round(rsi,2)}
 """
 
-        asyncio.run(bot.send_message(chat_id=CHAT_ID, text=message))
+        asyncio.run(send_message(message))
 
 
 while True:
@@ -126,6 +126,6 @@ while True:
 
     except Exception as e:
 
-        print(e)
+        print("Error:", e)
 
         time.sleep(60)
