@@ -4,6 +4,7 @@ import pandas as pd
 from binance.client import Client
 import ta
 from telegram import Bot
+import asyncio
 
 print("BOT STARTED")
 
@@ -13,13 +14,22 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 bot = Bot(token=TELEGRAM_TOKEN)
 
 import asyncio
-asyncio.run(bot.send_message(chat_id=CHAT_ID, text="机器人已启动"))
+
+async def send_start_message():
+    await bot.send_message(chat_id=CHAT_ID, text="🤖 交易机器人已启动并开始监控 BTC 和 ETH")
+
+asyncio.run(send_start_message())
+
+asyncio.run(bot.send_message(chat_id=CHAT_ID, text="🤖 Trading Bot 已启动"))
 
 client = Client()
 
-symbols = ["BTCUSDT", "ETHUSDT"]
+symbols = ["BTCUSDT","ETHUSDT"]
+
+last_signal = {}
 
 def get_data(symbol):
+
     klines = client.get_klines(
         symbol=symbol,
         interval=Client.KLINE_INTERVAL_5MINUTE,
@@ -33,6 +43,7 @@ def get_data(symbol):
     ])
 
     df["close"] = df["close"].astype(float)
+
     return df
 
 
@@ -49,18 +60,46 @@ def check_signal(symbol):
     ema20 = ta.trend.EMAIndicator(df["close"], window=20).ema_indicator().iloc[-1]
     ema50 = ta.trend.EMAIndicator(df["close"], window=50).ema_indicator().iloc[-1]
 
-    # LONG SIGNAL
-    if rsi < 35 and macd > 0 and ema20 > ema50:
+    atr = ta.volatility.AverageTrueRange(
+        df["high"].astype(float),
+        df["low"].astype(float),
+        df["close"]
+    ).average_true_range().iloc[-1]
 
-        tp1 = price * 1.01
-        tp2 = price * 1.02
-        tp3 = price * 1.04
-        sl = price * 0.985
+    signal = None
+
+    if rsi < 40 and macd > 0 and ema20 > ema50:
+        signal = "LONG"
+
+    if rsi > 60 and macd < 0 and ema20 < ema50:
+        signal = "SHORT"
+
+    if signal:
+
+        if last_signal.get(symbol) == signal:
+            return
+
+        last_signal[symbol] = signal
+
+        if signal == "LONG":
+
+            tp1 = price + atr
+            tp2 = price + atr*2
+            tp3 = price + atr*3
+            sl = price - atr
+
+        else:
+
+            tp1 = price - atr
+            tp2 = price - atr*2
+            tp3 = price - atr*3
+            sl = price + atr
 
         message = f"""
-🚀 LONG SIGNAL
+🔥 {signal} SIGNAL
 
 Coin: {symbol}
+
 Entry: {round(price,2)}
 
 TP1: {round(tp1,2)}
@@ -72,32 +111,7 @@ SL: {round(sl,2)}
 RSI: {round(rsi,2)}
 """
 
-        bot.send_message(chat_id=CHAT_ID, text=message)
-
-    # SHORT SIGNAL
-    if rsi > 65 and macd < 0 and ema20 < ema50:
-
-        tp1 = price * 0.99
-        tp2 = price * 0.98
-        tp3 = price * 0.96
-        sl = price * 1.015
-
-        message = f"""
-🔻 SHORT SIGNAL
-
-Coin: {symbol}
-Entry: {round(price,2)}
-
-TP1: {round(tp1,2)}
-TP2: {round(tp2,2)}
-TP3: {round(tp3,2)}
-
-SL: {round(sl,2)}
-
-RSI: {round(rsi,2)}
-"""
-
-        bot.send_message(chat_id=CHAT_ID, text=message)
+        asyncio.run(bot.send_message(chat_id=CHAT_ID, text=message))
 
 
 while True:
@@ -113,6 +127,5 @@ while True:
     except Exception as e:
 
         print(e)
+
         time.sleep(60)
-
-
